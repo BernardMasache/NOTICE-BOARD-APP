@@ -9,18 +9,27 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.NumberPicker;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCanceledListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
+
+import java.net.URI;
 
 public class ActivityFragments extends AppCompatActivity {
 
@@ -30,11 +39,17 @@ public class ActivityFragments extends AppCompatActivity {
     FloatingActionButton add_notice;
     private Button import_file_id;
     private View dialogView;
-    private int resultCode =1;
+    private int rCode =1;
+    private String type_of_file;
+    private ImageView post_img_id;
     private NumberPicker duration, file_type, notification_type;
     private String[] durations = {"Day", "Week", "Month"};
-    private String[] file_types = {"jpg", "png", "pdf", "docx"};
+    private String[] file_types = {"jpeg", "png", "pdf", "docx"};
     private String[] notification_types = {"Academic", "Religion", "Sports", "Business", "AOBs"};
+
+//    firebase declarations
+    StorageReference imgReference;
+    FirebaseStorage firebaseStorage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +62,7 @@ public class ActivityFragments extends AppCompatActivity {
         file_type = (NumberPicker) dialogView.findViewById(R.id.post_file_type);
         notification_type = (NumberPicker) dialogView.findViewById(R.id.post_type);
         import_file_id = (Button) dialogView.findViewById(R.id.import_file_id);
-
+        post_img_id = (ImageView) dialogView.findViewById(R.id.post_img_id);
         add_notice = (FloatingActionButton) findViewById(R.id.add_notice);
 
         add_notice.setOnClickListener(new View.OnClickListener() {
@@ -98,6 +113,23 @@ public class ActivityFragments extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == rCode && resultCode == RESULT_OK) {
+            Uri uri = data.getData();
+            post_img_id.setImageURI(uri);
+            imgReference = FirebaseStorage.getInstance().getReference().child("NoteImage").child(uri.getLastPathSegment());
+            imgReference.putFile(uri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    Toast.makeText(getApplicationContext(), "File uploaded successfully", Toast.LENGTH_SHORT).show();
+                }
+            }).addOnCanceledListener(new OnCanceledListener() {
+                @Override
+                public void onCanceled() {
+                    Toast.makeText(getApplicationContext(), "File uploaded failed!", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     public void getValuesNotes(){
@@ -107,16 +139,45 @@ public class ActivityFragments extends AppCompatActivity {
         duration.setMinValue(0);
         duration.setDisplayedValues(durations);
 
+
         file_type.setMaxValue(3);
         file_type.setMinValue(0);
         file_type.setDisplayedValues(file_types);
 
+        file_type.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            @Override
+            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                if (picker.getValue() <2){
+                    type_of_file = "image/"+file_types[picker.getValue()].toString().trim();
+                }else if (picker.getValue() > 1){
+                    type_of_file = "application/"+file_types[picker.getValue()].toString().trim();
+
+                }
+            }
+        });
+
+        file_type.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
+
+//        type_of_file = file_type.getValue();
+
+        if (file_type.getValue() <2){
+            type_of_file = "image/"+file_types[file_type.getValue()].toString().trim();
+        }else if (file_type.getValue() > 1){
+            type_of_file = "application/"+file_types[file_type.getValue()].toString().trim();
+        }
         notification_type.setMaxValue(4);
         notification_type.setMinValue(0);
         notification_type.setDisplayedValues(notification_types);
 
         dialogBuilder.setView(dialogView);
+
         getImageDetails();
+
         dialogBuilder.setTitle("Add your notification.");
         dialogBuilder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
             @Override
@@ -133,9 +194,9 @@ public class ActivityFragments extends AppCompatActivity {
         import_file_id.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent imageIntent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                imageIntent.setType("image/*");
-                startActivityForResult(imageIntent, resultCode);
+                Intent imageIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                imageIntent.setType(type_of_file);
+                startActivityForResult(imageIntent, rCode);
             }
         });
     }

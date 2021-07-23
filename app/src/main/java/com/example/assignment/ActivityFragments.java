@@ -19,6 +19,7 @@ import android.widget.ImageView;
 import android.widget.NumberPicker;
 import android.widget.Toast;
 
+import com.github.barteksc.pdfviewer.PDFView;
 import com.google.android.gms.tasks.OnCanceledListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -39,18 +40,21 @@ public class ActivityFragments extends AppCompatActivity {
     FloatingActionButton add_notice;
     private Button import_file_id;
     private View dialogView;
+    private PDFView  pdfView;
     private int rCode =1;
+    private int pCode =2;
+
     private String type_of_file;
     private ImageView post_img_id;
     private NumberPicker duration, file_type, notification_type;
     private String[] durations = {"Day", "Week", "Month"};
-    private String[] file_types = {"jpeg", "png", "pdf", "docx"};
+    private String[] file_types = {"jpeg", "png", "pdf"};
     private String[] notification_types = {"Academic", "Religion", "Sports", "Business", "AOBs"};
 
 //    firebase declarations
     StorageReference imgReference;
     FirebaseStorage firebaseStorage;
-
+    Uri uri;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,6 +68,7 @@ public class ActivityFragments extends AppCompatActivity {
         import_file_id = (Button) dialogView.findViewById(R.id.import_file_id);
         post_img_id = (ImageView) dialogView.findViewById(R.id.post_img_id);
         add_notice = (FloatingActionButton) findViewById(R.id.add_notice);
+        pdfView = (PDFView) dialogView.findViewById(R.id.pdfView);
 
         add_notice.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -115,8 +120,9 @@ public class ActivityFragments extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == rCode && resultCode == RESULT_OK) {
-            Uri uri = data.getData();
+            uri = data.getData();
             post_img_id.setImageURI(uri);
+
             imgReference = FirebaseStorage.getInstance().getReference().child("NoteImage").child(uri.getLastPathSegment());
             imgReference.putFile(uri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
@@ -129,6 +135,8 @@ public class ActivityFragments extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "File uploaded failed!", Toast.LENGTH_SHORT).show();
                 }
             });
+//        }else if (requestCode == pCode && resultCode == RESULT_OK){
+//            pdfView.fromUri(uri).load();
         }
     }
 
@@ -139,8 +147,7 @@ public class ActivityFragments extends AppCompatActivity {
         duration.setMinValue(0);
         duration.setDisplayedValues(durations);
 
-
-        file_type.setMaxValue(3);
+        file_type.setMaxValue(2);
         file_type.setMinValue(0);
         file_type.setDisplayedValues(file_types);
 
@@ -163,7 +170,6 @@ public class ActivityFragments extends AppCompatActivity {
             }
         });
 
-//        type_of_file = file_type.getValue();
 
         if (file_type.getValue() <2){
             type_of_file = "image/"+file_types[file_type.getValue()].toString().trim();
@@ -194,9 +200,19 @@ public class ActivityFragments extends AppCompatActivity {
         import_file_id.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent imageIntent = new Intent(Intent.ACTION_GET_CONTENT);
-                imageIntent.setType(type_of_file);
-                startActivityForResult(imageIntent, rCode);
+
+
+//                if (file_type.getValue() < 2){
+                    Intent imageIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                    imageIntent.setType(type_of_file);
+                    startActivityForResult(imageIntent, rCode);
+//                }
+//                if (file_type.getValue() >1){
+//                    Intent intent = new Intent(Intent.ACTION_VIEW);
+//                    intent.setDataAndType(uri, type_of_file);
+//                    intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+//                    startActivityForResult(intent, pCode);
+//                }
             }
         });
     }
